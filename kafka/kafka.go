@@ -5,7 +5,7 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/opensourceways/kafka-lib/mq"
+	"github.com/G-Sacker/kafka-lib/mq"
 
 	"github.com/IBM/sarama"
 	"github.com/dnwe/otelsarama"

@@ -4,33 +4,36 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/opensourceways/kafka-lib/mq"
+	"github.com/G-Sacker/kafka-lib/mq"
 )
 
-func newPublisher(redis Redis, log mq.Logger, queueName string) {
+func newPublisher(redis Redis, log mq.Logger, queueName string, mqInstance mq.MQ) *publisherImpl {
 	if redis != nil && log != nil && queueName != "" {
-		publisher = &publisherImpl{
-			q:       &queueImpl{redis: redis, queueName: queueName},
-			logger:  log,
-			stop:    make(chan struct{}),
-			stopped: make(chan struct{}),
+		p := &publisherImpl{
+			q:          &queueImpl{redis: redis, queueName: queueName},
+			logger:     log,
+			mqInstance: mqInstance,
+			stop:       make(chan struct{}),
+			stopped:    make(chan struct{}),
 		}
 
-		publisher.start()
+		p.start()
+		return p
 	}
+	return nil
 }
 
-func Publish(topic string, header map[string]string, msg []byte, opts ...mq.PublishOption) error {
+func (agent *MQAgent) Publish(topic string, header map[string]string, msg []byte, opts ...mq.PublishOption) error {
 	v := &mq.Message{
 		Header: header,
 		Body:   msg,
 	}
 
-	if publisher != nil {
-		return publisher.publish(topic, v, opts...)
+	if agent.publisher != nil {
+		return agent.publisher.publish(agent.mqInstance, topic, v, opts...)
 	}
 
-	return mqInstance.Publish(topic, v, opts...)
+	return agent.mqInstance.Publish(topic, v, opts...)
 }
 
 // queue
@@ -42,13 +45,14 @@ type queue interface {
 
 // publisherImpl
 type publisherImpl struct {
-	q       queue
-	logger  mq.Logger
-	stop    chan struct{}
-	stopped chan struct{}
+	q          queue
+	logger     mq.Logger
+	mqInstance mq.MQ
+	stop       chan struct{}
+	stopped    chan struct{}
 }
 
-func (impl *publisherImpl) publish(topic string, msg *mq.Message, opts ...mq.PublishOption) error {
+func (impl *publisherImpl) publish(mqInstance mq.MQ, topic string, msg *mq.Message, opts ...mq.PublishOption) error {
 	if err := mqInstance.Publish(topic, msg, opts...); err == nil {
 		return nil
 	}
@@ -94,7 +98,7 @@ func (impl *publisherImpl) watch() {
 		} else {
 			interval = tenMillisecond
 
-			if err := impl.publish(msg.Topic, &msg.Msg); err != nil {
+			if err := impl.publish(impl.mqInstance, msg.Topic, &msg.Msg); err != nil {
 				impl.logger.Error("faield to publish message, err:%s", err.Error())
 			}
 		}

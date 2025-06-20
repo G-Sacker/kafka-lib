@@ -9,7 +9,7 @@ import (
 	"github.com/dnwe/otelsarama"
 	"github.com/opensourceways/server-common-lib/utils"
 
-	"github.com/opensourceways/kafka-lib/mq"
+	"github.com/G-Sacker/kafka-lib/mq"
 )
 
 type eventHandler interface {

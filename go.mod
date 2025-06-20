@@ -1,5 +1,4 @@
-module github.com/opensourceways/kafka-lib
-
+module github.com/G-Sacker/kafka-lib
 go 1.21
 
 toolchain go1.21.0
@@ -10,6 +9,7 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/opensourceways/server-common-lib v0.0.0-20231016134644-4bd7efe825a9
 	github.com/xdg-go/scram v1.1.2
+	go.opentelemetry.io/otel v1.27.0
 )
 
 require (
@@ -33,7 +33,6 @@ require (
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475 // indirect
 	github.com/xdg-go/pbkdf2 v1.0.0 // indirect
 	github.com/xdg-go/stringprep v1.0.4 // indirect
-	go.opentelemetry.io/otel v1.27.0 // indirect
 	go.opentelemetry.io/otel/metric v1.27.0 // indirect
 	go.opentelemetry.io/otel/trace v1.27.0 // indirect
 	golang.org/x/crypto v0.23.0 // indirect

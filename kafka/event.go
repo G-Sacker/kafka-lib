@@ -3,7 +3,7 @@ package kafka
 import (
 	"github.com/IBM/sarama"
 
-	"github.com/opensourceways/kafka-lib/mq"
+	"github.com/G-Sacker/kafka-lib/mq"
 )
 
 type event struct {

@@ -8,8 +8,8 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/opensourceways/kafka-lib/kafka"
-	"github.com/opensourceways/kafka-lib/mq"
+	"github.com/G-Sacker/kafka-lib/kafka"
+	"github.com/G-Sacker/kafka-lib/mq"
 )
 
 var (
@@ -18,28 +18,36 @@ var (
 	publisher  *publisherImpl
 )
 
-func Init(cfg *Config, log mq.Logger, redis Redis, queueName string, removeCert bool) error {
+type MQAgent struct {
+	mqInstance mq.MQ
+	subscriber *serviceImpl
+	publisher  *publisherImpl
+}
+
+func newMQAgent(cfg *Config, log mq.Logger, redis Redis, queueName string, removeCert bool) (*MQAgent, error) {
 	if log == nil {
-		return errors.New("missing log")
+		return nil, errors.New("missing log")
 	}
+
+	agent := &MQAgent{}
 
 	v := mq.MQ(nil)
 
 	if cfg.MQCert != "" {
 		ca, err := ioutil.ReadFile(cfg.MQCert)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		if removeCert {
 			if err := os.Remove(cfg.MQCert); err != nil {
-				return err
+				return nil, err
 			}
 		}
 
 		pool := x509.NewCertPool()
 		if !pool.AppendCertsFromPEM(ca) {
-			return fmt.Errorf("failed to append certs from PEM")
+			return nil, fmt.Errorf("failed to append certs from PEM")
 		}
 
 		tlsConfig := &tls.Config{
@@ -66,22 +74,26 @@ func Init(cfg *Config, log mq.Logger, redis Redis, queueName string, removeCert 
 	}
 
 	if err := v.Init(); err != nil {
-		return err
+		return nil, err
 	}
 
 	if err := v.Connect(); err != nil {
-		return err
+		return nil, err
 	}
 
-	mqInstance = v
-	subscriber = &serviceImpl{logger: log}
+	// mqInstance = v
+	// subscriber = &serviceImpl{logger: log}
 
-	newPublisher(redis, log, queueName)
+	// newPublisher(redis, log, queueName)
 
-	return nil
+	agent.mqInstance = v
+	agent.subscriber = &serviceImpl{logger: log}
+	agent.publisher = newPublisher(redis, log, queueName, agent.mqInstance)
+
+	return agent, nil
 }
 
-func Exit() {
+func (agent *MQAgent) Exit() {
 	if subscriber != nil {
 		subscriber.unsubscribe()
 
@@ -103,7 +115,7 @@ func Exit() {
 	}
 }
 
-func Subscribe(group string, h Handler, topics []string) error {
+func (agent *MQAgent) Subscribe(group string, h Handler, topics []string) error {
 	if group == "" || h == nil || len(topics) == 0 {
 		return errors.New("missing parameters")
 	}
@@ -113,13 +125,13 @@ func Subscribe(group string, h Handler, topics []string) error {
 	}
 
 	return subscriber.subscribe(
-		h, topics,
+		agent.mqInstance, h, topics,
 		mq.Queue(group),
 		mq.SubscribeStrategy(mq.StrategyDoOnce),
 	)
 }
 
-func SubscribeWithStrategyOfRetry(group string, h Handler, topics []string, retryNum int) error {
+func (agent *MQAgent) SubscribeWithStrategyOfRetry(group string, h Handler, topics []string, retryNum int) error {
 	if group == "" || h == nil || len(topics) == 0 || retryNum == 0 {
 		return errors.New("missing parameters")
 	}
@@ -129,14 +141,14 @@ func SubscribeWithStrategyOfRetry(group string, h Handler, topics []string, retr
 	}
 
 	return subscriber.subscribe(
-		h, topics,
+		agent.mqInstance, h, topics,
 		mq.Queue(group),
 		mq.SubscribeRetryNum(retryNum),
 		mq.SubscribeStrategy(mq.StrategyRetry),
 	)
 }
 
-func SubscribeWithStrategyOfSendBack(group string, h Handler, topics []string) error {
+func (agent *MQAgent) SubscribeWithStrategyOfSendBack(group string, h Handler, topics []string) error {
 	if group == "" || h == nil || len(topics) == 0 {
 		return errors.New("missing parameters")
 	}
@@ -146,7 +158,8 @@ func SubscribeWithStrategyOfSendBack(group string, h Handler, topics []string) e
 	}
 
 	return subscriber.subscribe(
-		h, topics,
+
+		agent.mqInstance, h, topics,
 		mq.Queue(group),
 		mq.SubscribeStrategy(mq.StrategySendBack),
 	)
@@ -173,7 +186,7 @@ func (impl *serviceImpl) unsubscribe() {
 	}
 }
 
-func (impl *serviceImpl) subscribe(h Handler, topics []string, opts ...mq.SubscribeOption) error {
+func (impl *serviceImpl) subscribe(mqInstance mq.MQ, h Handler, topics []string, opts ...mq.SubscribeOption) error {
 	s, err := mqInstance.Subscribe(
 		func(e mq.Event) error {
 			msg := e.Message()

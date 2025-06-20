@@ -3,7 +3,7 @@ package kafka
 import (
 	"testing"
 
-	"github.com/opensourceways/kafka-lib/mq"
+	"github.com/G-Sacker/kafka-lib/mq"
 )
 
 func TestBroker(t *testing.T) {
