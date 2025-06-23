@@ -24,7 +24,7 @@ type MQAgent struct {
 	publisher  *publisherImpl
 }
 
-func newMQAgent(cfg *Config, log mq.Logger, redis Redis, queueName string, removeCert bool) (*MQAgent, error) {
+func NewMQAgent(cfg *Config, log mq.Logger, redis Redis, queueName string, removeCert bool) (*MQAgent, error) {
 	if log == nil {
 		return nil, errors.New("missing log")
 	}
