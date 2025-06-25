@@ -12,11 +12,11 @@ import (
 	"github.com/G-Sacker/kafka-lib/mq"
 )
 
-var (
-	mqInstance mq.MQ
-	subscriber *serviceImpl
-	publisher  *publisherImpl
-)
+// var (
+// 	mqInstance mq.MQ
+// 	subscriber *serviceImpl
+// 	publisher  *publisherImpl
+// )
 
 type MQAgent struct {
 	mqInstance mq.MQ
@@ -94,24 +94,24 @@ func NewMQAgent(cfg *Config, log mq.Logger, redis Redis, queueName string, remov
 }
 
 func (agent *MQAgent) Exit() {
-	if subscriber != nil {
-		subscriber.unsubscribe()
+	if agent.subscriber != nil {
+		agent.subscriber.unsubscribe()
 
-		subscriber = nil
+		agent.subscriber = nil
 	}
 
-	if publisher != nil {
-		publisher.exit()
+	if agent.publisher != nil {
+		agent.publisher.exit()
 
-		publisher = nil
+		agent.publisher = nil
 	}
 
-	if mqInstance != nil {
-		if err := mqInstance.Disconnect(); err != nil {
-			mqInstance.Options().Log.Errorf("exit kafka, err:%v", err)
+	if agent.mqInstance != nil {
+		if err := agent.mqInstance.Disconnect(); err != nil {
+			agent.mqInstance.Options().Log.Errorf("exit kafka, err:%v", err)
 		}
 
-		mqInstance = nil
+		agent.mqInstance = nil
 	}
 }
 
@@ -120,11 +120,11 @@ func (agent *MQAgent) Subscribe(group string, h Handler, topics []string) error 
 		return errors.New("missing parameters")
 	}
 
-	if subscriber == nil {
+	if agent.subscriber == nil {
 		return errors.New("unimplemented")
 	}
 
-	return subscriber.subscribe(
+	return agent.subscriber.subscribe(
 		agent.mqInstance, h, topics,
 		mq.Queue(group),
 		mq.SubscribeStrategy(mq.StrategyDoOnce),
@@ -136,11 +136,11 @@ func (agent *MQAgent) SubscribeWithStrategyOfRetry(group string, h Handler, topi
 		return errors.New("missing parameters")
 	}
 
-	if subscriber == nil {
+	if agent.subscriber == nil {
 		return errors.New("unimplemented")
 	}
 
-	return subscriber.subscribe(
+	return agent.subscriber.subscribe(
 		agent.mqInstance, h, topics,
 		mq.Queue(group),
 		mq.SubscribeRetryNum(retryNum),
@@ -153,11 +153,11 @@ func (agent *MQAgent) SubscribeWithStrategyOfSendBack(group string, h Handler, t
 		return errors.New("missing parameters")
 	}
 
-	if subscriber == nil {
+	if agent.subscriber == nil {
 		return errors.New("unimplemented")
 	}
 
-	return subscriber.subscribe(
+	return agent.subscriber.subscribe(
 
 		agent.mqInstance, h, topics,
 		mq.Queue(group),
